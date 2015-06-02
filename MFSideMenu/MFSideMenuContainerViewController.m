@@ -20,6 +20,8 @@ typedef enum {
 @interface MFSideMenuContainerViewController ()
 @property (nonatomic, strong) UIView *menuContainerView;
 
+// Used to validate completion callbacks
+@property (nonatomic, assign) MFSideMenuState targetMenuState;
 @property (nonatomic, assign) CGPoint panGestureOrigin;
 @property (nonatomic, assign) CGFloat panGestureVelocity;
 @property (nonatomic, assign) MFSideMenuPanDirection panDirection;
@@ -37,6 +39,7 @@ typedef enum {
 @synthesize panGestureOrigin;
 @synthesize panGestureVelocity;
 @synthesize menuState = _menuState;
+@synthesize targetMenuState = _targetMenuState;
 @synthesize panDirection;
 @synthesize leftMenuWidth = _leftMenuWidth;
 @synthesize rightMenuWidth = _rightMenuWidth;
@@ -348,6 +351,7 @@ typedef enum {
 }
 
 - (void)setMenuState:(MFSideMenuState)menuState completion:(void (^)(void))completion {
+    _targetMenuState = menuState;
     void (^innerCompletion)() = ^ {
         _menuState = menuState;
         
@@ -362,9 +366,14 @@ typedef enum {
         case MFSideMenuStateClosed: {
             [self sendStateEventNotification:MFSideMenuStateEventMenuWillClose];
             [self closeSideMenuCompletion:^{
-                [self.leftMenuViewController view].hidden = YES;
-                [self.rightMenuViewController view].hidden = YES;
-                innerCompletion();
+                // Prevent a race where the menu closes and opens again
+                // before this completion callback is called, leading
+                // to an open menu but hidden left/right view controllers.
+                if (MFSideMenuStateClosed == _targetMenuState) {
+                    [self.leftMenuViewController view].hidden = YES;
+                    [self.rightMenuViewController view].hidden = YES;
+                    innerCompletion();
+                }
             }];
             break;
         }
