@@ -147,6 +147,16 @@ typedef enum {
 }
 
 
+- (BOOL) prefersStatusBarHidden {
+    if (self.centerViewController) {
+        if ([self.centerViewController isKindOfClass:[UINavigationController class]]) {
+            return [((UINavigationController *)self.centerViewController).topViewController prefersStatusBarHidden];
+        }
+        return [self.centerViewController prefersStatusBarHidden];
+    }
+    return NO;
+}
+
 - (UIStatusBarStyle)preferredStatusBarStyle {
     if (self.centerViewController) {
         if ([self.centerViewController isKindOfClass:[UINavigationController class]]) {
